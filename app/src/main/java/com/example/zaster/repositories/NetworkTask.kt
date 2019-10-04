@@ -29,10 +29,9 @@ class NetworkTask {
         //was unable to implement the string from strings xml 
         val body = ("email=" + email + "&password=" + password).toRequestBody(mediaType)
         request.post(body)
-        val client = OkHttpClient.Builder().build()
-        //return this as ResponseCode
+        
+        val client = OkHttpClient.Builder().build()     
         val execute = client.newCall(request.build()).execute()
-
         return handleResponseCode(execute.code, execute.body?.string())
 
     }
