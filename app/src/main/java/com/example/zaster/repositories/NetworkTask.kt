@@ -26,7 +26,8 @@ class NetworkTask {
                 .url("www.google.com")
 
         val mediaType = "application/x-www-form-urlencoded".toMediaType()
-        val body = Resources.getSystem().getString(R.string.login_info, password, email).toRequestBody(mediaType)
+        //was unable to implement the string from strings xml 
+        val body = ("email=" + email + "&password=" + password).toRequestBody(mediaType)
         request.post(body)
         val client = OkHttpClient.Builder().build()
         //return this as ResponseCode
