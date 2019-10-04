@@ -32,17 +32,17 @@ class NetworkTask {
         //return this as ResponseCode
         val execute = client.newCall(request.build()).execute()
 
-        return handleResponseCode(execute.code, execute.body)
+        return handleResponseCode(execute.code, execute.body?.string())
 
     }
 
     //using when as an expression body to simplify the code
     //this causes duplicated code as values cannot be instantiated in the body of the method
-    private fun handleResponseCode(code : Int, body : ResponseBody?) : Response = when(code) {
+    private fun handleResponseCode(code : Int, body : String?) : Response = when(code) {
         200 ->
         {
             val gson = GsonBuilder().create()
-            val message = gson.fromJson(body?.string(), Valid::class.java)
+            val message = gson.fromJson(body, Valid::class.java)
             Response(message.token, ResponseCode.VALID)
         }
         401 ->
@@ -52,7 +52,7 @@ class NetworkTask {
         500 ->
         {
             val gson = GsonBuilder().create()
-            val message = gson.fromJson(body?.string(), Internal::class.java)
+            val message = gson.fromJson(body, Internal::class.java)
             Response(message.error, ResponseCode.INTERNAL)
         }
         else -> Response("Unexpected error code", ResponseCode.INTERNAL)
