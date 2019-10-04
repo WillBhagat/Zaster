@@ -21,7 +21,7 @@ class NetworkTask {
 
     fun runTask(password : String, email : String) : Response
     {
-        //the requirement was for the URL to be from application configuration but I have not heard of this before and could not find this in my research
+        //the requirement was for the URL to be from application configuration but I could not anything about this in my research
         val request = Request.Builder()
                 .url("www.google.com")
 
