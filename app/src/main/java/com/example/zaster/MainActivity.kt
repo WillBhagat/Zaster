@@ -7,72 +7,99 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
-import com.example.zaster.models.Response
-import com.example.zaster.models.ResponseCode
-import com.example.zaster.repositories.NetworkTask
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import android.R.id.edit
 import android.content.Context
 import android.content.SharedPreferences
-import android.support.v4.app.FragmentActivity
+import com.example.zaster.models.LoginInfo
+import com.example.zaster.models.ResponseMessage
+import com.example.zaster.repositories.PostLoginInfo
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import dagger.Component
+import dagger.Module
+import dagger.Provides
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import javax.inject.Inject
+import javax.inject.Singleton
 
+private const val TAG = "MyActivity"
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var textView: TextView
-    private lateinit var button: Button
+    private lateinit var loginButton: Button
     private lateinit var editText: EditText
-    private val networkTask = NetworkTask()
-    private lateinit var response : Response
-    private lateinit var bearer : String
+
+    private lateinit var token : String
     private lateinit var email : String
     private lateinit var name : String
+
+    @Inject lateinit var postLoginInfo : PostLoginInfo
+    private lateinit var sharedPreferences: SharedPreferences
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val settings = getSharedPreferences("mSharedPrefs", Context.MODE_PRIVATE)
+        DaggerNetworkComponent.create().inject(this)
 
+        writeSharedPrefs()
+        readSharedPrefs()
+        retrieveLoginInfo()
+        setupButtons()
+    }
+
+    private fun writeSharedPrefs()
+    {
+        sharedPreferences = getSharedPreferences("mSharedPrefs", Context.MODE_PRIVATE)
         // Writing data to SharedPreferences
         // I assume this is the requirement here as no database has been provided
-        val editor = settings.edit()
+        val editor = sharedPreferences.edit()
         editor.putString("email", "willbhagat@hotmail.co.uk")
         editor.putString("name", "Will Bhagat")
         editor.commit()
+    }
 
+    private fun readSharedPrefs()
+    {
         // Reading from SharedPreferences
-        name = settings.getString("name", "")
-        email = settings.getString("email", "")
+        name = sharedPreferences.getString("name", "")
+        email = sharedPreferences.getString("email", "")
+    }
 
+    private fun retrieveLoginInfo()
+    {
         textView = findViewById(R.id.welcomeText)
         textView.text = getString(R.string.welcome_message, name)
-
-
         editText = findViewById(R.id.editText)
-
-        button = findViewById(R.id.loginButton)
-        button.setOnClickListener {
-            runNetwork()
-            when (response.responseCode) {
-                ResponseCode.VALID -> {
-                    bearer = response.responseMessage
-                }
-                ResponseCode.INVALID -> {
-                    Toast.makeText(this, R.string.incorrect_password, Toast.LENGTH_LONG).show()
-                }
-                ResponseCode.INTERNAL -> {
-                    Toast.makeText(this, R.string.internal_error, Toast.LENGTH_LONG).show()
-                    Log.d("TAG", response.responseMessage)
-                }
-            }
+        loginButton = findViewById(R.id.loginButton)
+    }
+    private fun setupButtons()
+    {
+        loginButton.setOnClickListener {
+            loginButton.isEnabled = false
+            handleMessage(postLoginInfo.postLoginDetails(LoginInfo(email, editText.text.toString())))
+            loginButton.isEnabled = true
         }
     }
 
-    private fun runNetwork() = runBlocking {
-        response = withContext(Dispatchers.Default) {networkTask.runTask(editText.text.toString(), email)}
-    }
 
+    fun handleMessage(responseMessage: ResponseMessage) = when(responseMessage.code)
+    {
+        200 -> {
+            token = responseMessage.message
+        }
+        401 -> {
+            Toast.makeText(this, R.string.incorrect_password, Toast.LENGTH_LONG).show()
+        }
+        500, 0 -> {
+            Toast.makeText(this, R.string.internal_error, Toast.LENGTH_LONG).show()
+            Log.d(TAG, responseMessage.message)
+        }
+        else -> {
+            Log.d(TAG, "Unexpected error code")
+        }
+    }
 }
